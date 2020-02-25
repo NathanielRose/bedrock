@@ -14,7 +14,7 @@ Included is an option to set up your environment using docker container to suppo
 
 Please [install bedrock required tools](/cluster/README.md/#required-tools) in addition to the following:
 
-- [Golang](https://golang.org/doc/install) 1.11 or later
+- [Golang](https://golang.org/doc/install) 1.13 or later
 - [Dep](https://github.com/golang/go/wiki/PackageManagementTools) Optional, but required for now in order for VSCode intellisense and linting to work. [See issue 2317](https://github.com/Microsoft/vscode-go/issues/2317#issuecomment-479106825).
 - An Azure subscription
 - A [service principal with `owner` role status](https://docs.microsoft.com/en-us/azure/active-directory/develop/howto-create-service-principal-portal)
@@ -31,7 +31,7 @@ In this example we are using the [`azure-simple`](/cluster/environments/azure-si
 
     `sudo snap install --classic go`
 
-1. Run `go get -m github.com/microsoft/bedrock/test` and navigate to the bedrock test repository in the `/go/src/github.com/microsoft/bedrock/test` directory in the `$GOPATH`
+1. Run `go get -d github.com/microsoft/bedrock/test` and navigate to the bedrock test repository in the `/go/src/github.com/microsoft/bedrock/test` directory in the `$GOPATH`
 
 1. Change _all_ instances of the module source in the `main.tf` file pointing to `github.com/Microsoft/bedrock/cluster` to be your local development path `../..`.
 

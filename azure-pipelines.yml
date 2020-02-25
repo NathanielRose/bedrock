@@ -39,10 +39,15 @@ pr:
     - '**/*.md'
 
 variables:
-  GOBIN:  '$(GOPATH)/bin' # Go binaries path
-  GOROOT: '/usr/local/go1.11' # Go installation path
-  GOPATH: '$(system.defaultWorkingDirectory)/gopath' # Go workspace path
-  modulePath: '$(GOPATH)/src/github.com/$(build.repository.name)' # Path to the module's code
+- group: CSE Bedrock CI Environment Variables for Azure
+- name: GOBIN
+  value: '$(GOPATH)/bin' # Go binaries path
+- name: GOROOT
+  value: '/usr/local/go1.13' # Go installation path
+- name: GOPATH
+  value: '$(system.defaultWorkingDirectory)/gopath' # Go workspace path
+- name: modulePath
+  value: '$(GOPATH)/src/github.com/$(build.repository.name)' # Path to the module's code
 
 stages:
 - stage: Bedrock_Init_Validation
@@ -118,7 +123,17 @@ stages:
           export ssh_key=$(readlink -f id_rsa.pub)
           export public_key=$(cat id_rsa.pub)
           find $(modulePath)/cluster/environments/azure-simple -type f -name '*.tf' -exec sed -i 's/github.com\/Microsoft\/bedrock\/cluster/..\/../g' {} \;
-          go test -v -run TestIT_Bedrock_AzureSimple_Test -timeout 99999s
+          go test -v -run TestIT_Bedrock_AzureSimple_Test -timeout 99999s | tee TestIT_Bedrock_AzureSimple_Test.log
+          test1=$?
+          # terratest_log_parser -testlog TestIT_Bedrock_AzureSimple_Test.log -outputdir single_test_output
+          test2=$?
+          echo "Test1: $test1 Test2: $test2"
+          if [ $failed -eq 0 ]
+          then
+            echo "Bedrock_Build_Azure_Simple: Test passed."
+          else
+            echo "Bedrock_Build_Azure_Simple: Test failed."
+            exit 1
         env:
           ARM_CLIENT_ID: $(ARM_CLIENT_ID)
           ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
@@ -128,7 +143,18 @@ stages:
           ARM_BACKEND_STORAGE_KEY: $(ARM_BACKEND_STORAGE_KEY)
           ARM_BACKEND_STORAGE_CONTAINER: $(ARM_BACKEND_STORAGE_CONTAINER)
         workingDirectory: '$(modulePath)/test'
-        displayName: 'Integration Test: Bedrock_Azure-Simple '
+        displayName: 'Integration Test: Bedrock_Azure-Simple'
+      - task: PublishPipelineArtifact@1
+        inputs:
+          path: $(modulePath)/test/single_test_output
+          artifact: simple_test_logs
+        condition: always()
+      - task: PublishTestResults@2
+        inputs:
+          testResultsFormat: 'JUnit'
+          testResultsFiles: '**/report.xml' 
+          searchFolder: $(modulePath)/test
+        condition: and(eq(variables['Agent.JobStatus'], 'Succeeded'), endsWith(variables['Agent.JobName'], 'Bedrock_Build_Azure_Simple'))
 
   - job: Bedrock_Test_KEYVAULT
     displayName: Bedrock_Build_Azure_Single_KeyVault
@@ -139,10 +165,15 @@ stages:
       vmImage: 'Ubuntu-16.04'
       timeoutInMinutes: 60
     variables:
-      GOBIN:  '$(GOPATH)/bin' # Go binaries path
-      GOROOT: '/usr/local/go1.11' # Go installation path
-      GOPATH: '$(system.defaultWorkingDirectory)/gopath' # Go workspace path
-      modulePath: '$(GOPATH)/src/github.com/$(build.repository.name)' # Path to the module's code
+    - group: CSE Bedrock CI Environment Variables for Azure
+    - name: GOBIN
+      value: '$(GOPATH)/bin' # Go binaries path
+    - name: GOROOT
+      value: '/usr/local/go1.13' # Go installation path
+    - name: GOPATH
+      value: '$(system.defaultWorkingDirectory)/gopath' # Go workspace path
+    - name: modulePath
+      value: '$(GOPATH)/src/github.com/$(build.repository.name)' # Path to the module's code
 
     steps:
     - template: pipelines/bedrock-whitelist-artifact-embed.yml
@@ -152,7 +183,17 @@ stages:
         export ssh_key=$(readlink -f id_rsa.pub)
         export public_key=$(cat id_rsa.pub)
         find $(modulePath)/cluster/environments/azure-single-keyvault -type f -name '*.tf' -exec sed -i 's/github.com\/Microsoft\/bedrock\/cluster/..\/../g' {} \;
-        go test -v -run TestIT_Bedrock_AzureCommon_KV_Test -timeout 99999s
+        go test -v -run TestIT_Bedrock_AzureCommon_KV_Test -timeout 99999s | tee TestIT_Bedrock_AzureCommon_KV_Test.log
+        test1=$?
+        # terratest_log_parser -testlog TestIT_Bedrock_AzureCommon_KV_Test.log -outputdir common_test_output
+        test2=$?
+        echo "Test1: $test1 Test2: $test2"
+        # if [ $? -eq 0 ]
+        # then
+        #   echo "Bedrock_Build_Azure_Single_KeyVault: Test passed."
+        # else
+        #   echo "Bedrock_Build_Azure_Single_KeyVault: Test failed."
+        #   exit 1
       env:
         ARM_CLIENT_ID: $(ARM_CLIENT_ID)
         ARM_CLIENT_OBJECT_ID: $(ARM_CLIENT_OBJECT_ID)
@@ -164,6 +205,17 @@ stages:
         ARM_BACKEND_STORAGE_CONTAINER: $(ARM_BACKEND_STORAGE_CONTAINER)
       workingDirectory: '$(modulePath)/test'
       displayName: 'Integration Test: Bedrock_Azure-Common-KeyVault '
+    - task: PublishPipelineArtifact@1
+      inputs:
+        path: $(modulePath)/test/common_test_output
+        artifact: common_test_logs
+      condition: always()
+    - task: PublishTestResults@2
+      inputs:
+        testResultsFormat: 'JUnit'
+        testResultsFiles: '**/report.xml'
+        searchFolder: $(modulePath)/test
+      condition: and(eq(variables['Agent.JobStatus'], 'Succeeded'), endsWith(variables['Agent.JobName'], 'Bedrock_Build_Azure_Single_KeyVault'))
 
   - job: Bedrock_Test_MULTIPLE
     dependsOn: Bedrock_Init_Validate
@@ -175,10 +227,15 @@ stages:
       timeoutInMinutes: 60
 
     variables:
-      GOBIN:  '$(GOPATH)/bin' # Go binaries path
-      GOROOT: '/usr/local/go1.11' # Go installation path
-      GOPATH: '$(system.defaultWorkingDirectory)/gopath' # Go workspace path
-      modulePath: '$(GOPATH)/src/github.com/$(build.repository.name)' # Path to the module's code
+    - group: CSE Bedrock CI Environment Variables for Azure
+    - name: GOBIN
+      value: '$(GOPATH)/bin' # Go binaries path
+    - name: GOROOT
+      value: '/usr/local/go1.13' # Go installation path
+    - name: GOPATH
+      value: '$(system.defaultWorkingDirectory)/gopath' # Go workspace path
+    - name: modulePath
+      value: '$(GOPATH)/src/github.com/$(build.repository.name)' # Path to the module's code
 
     steps:
     - template: pipelines/bedrock-whitelist-artifact-embed.yml
@@ -188,7 +245,12 @@ stages:
         export ssh_key=$(readlink -f id_rsa.pub)
         export public_key=$(cat id_rsa.pub)
         find $(modulePath)/cluster/environments/azure-multiple-clusters -type f -name '*.tf' -exec sed -i 's/github.com\/Microsoft\/bedrock\/cluster/..\/../g' {} \;
-        go test -v -run TestIT_Bedrock_AzureMC_Test -timeout 99999s
+        go test -v -run TestIT_Bedrock_AzureMC_Test -timeout 99999s | tee TestIT_Bedrock_AzureMC_Test.log
+        test1=$?
+        # terratest_log_parser -testlog TestIT_Bedrock_AzureMC_Test.log -outputdir mc_test_output
+        test2=$?
+        echo "Test1: $test1 Test2: $test2"
+
       env:
         ARM_CLIENT_ID: $(ARM_CLIENT_ID)
         ARM_CLIENT_OBJECT_ID: $(ARM_CLIENT_OBJECT_ID)
@@ -200,6 +262,18 @@ stages:
         ARM_BACKEND_STORAGE_CONTAINER: $(ARM_BACKEND_STORAGE_CONTAINER)
       workingDirectory: '$(modulePath)/test'
       displayName: 'Integration Test: Bedrock_Azure-Common-MultiCluster '
+    - task: PublishPipelineArtifact@1
+      inputs:
+        path: $(modulePath)/test/mc_test_output
+        artifact: mc_test_logs
+      condition: always()
+    - task: PublishTestResults@2
+      inputs:
+        testResultsFormat: 'JUnit'
+        testResultsFiles: '**/report.xml'
+        searchFolder: $(modulePath)/test
+      condition: and(eq(variables['Agent.JobStatus'], 'Succeeded'), endsWith(variables['Agent.JobName'], 'Bedrock_Build_Azure_Multiple_Clusters'))
+
 
 #     - script: |
 #         export ssh_key=$(readlink -f id_rsa.pub)
